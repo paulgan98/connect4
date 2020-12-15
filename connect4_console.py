@@ -365,7 +365,6 @@ def main():
         print("Paul is thinking...")
         m = minimax(originalBoard, yellow, 7, -999999999, 999999999)
         dropChip(m.col, yellow, originalBoard)
-        # print(m.col+1)
         ind = m.col
 
 if __name__ == "__main__":
