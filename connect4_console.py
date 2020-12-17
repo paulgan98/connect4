@@ -14,27 +14,6 @@ import random
 # R1  01 11 21 31 41 51 61 
 # R0  00 10 20 30 40 50 60
 
-# X    O    X    X         X    .    
-
-# O    O    O    X         X    .    
-
-# O    X    X    X    O    O    .    
-
-# X    O    O    O    X    X    .    
-
-# O    O    X    X    O    O    .    
-
-# O    O    X    X    O    X    X
-# computer's turn now
-testBoard = [
-            ["O","O","X","O","O","X"],
-            ["O","O","O","X","O","O"],
-            ["X","X","O","X","O","X"],
-            ["X","X","O","X","X","X"],
-            ["O","O","X","O",".","."],
-            ["X","O","X","O","X","X"],
-            ["X",".",".",".",".","."]]
-
 originalBoard = []  # [ [C0 rows], [C1 rows], ... , [C6 rows] ]
 maxC = 7   
 maxR = 6
@@ -256,8 +235,8 @@ def boardState(board, player):
                         [5,8,11,11,8,5],    # C2
                         [7,10,13,13,10,7],  # C3
                         [5,8,11,11,8,5],    # C4
-                        [4,6,8,8,6,4],
-                        [3,4,5,5,4,3]]
+                        [4,6,8,8,6,4],      # C5
+                        [3,4,5,5,4,3]]      # C6
     evalScore = 0
     for coln in range(len(board)):
         for rown in range(coln):
@@ -265,7 +244,6 @@ def boardState(board, player):
                 evalScore += evaluationTable[coln][rown]
 
     # return score based on board state
-    # 2-in-row < center col < 3-in-row < 4-in-row
     score = evalScore + 10*numTwos + 100*numThrees + 1000000*numFours + 20*numCenters
     if player == red:
         return (-1 * score)
@@ -422,8 +400,6 @@ def main():
         if checkGameOver(running):
             break
         print("Paul is thinking...")
-        # if 15 <= moves <= 20:
-        #     d = 8
         if 19 <= moves <= 24:
             d = 8
         elif 25 <= moves <= 29:
