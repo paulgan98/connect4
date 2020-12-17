@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import random
 
 # (C,R)
 # (7,6)
@@ -12,6 +13,27 @@ import os
 # R2  02 12 22 32 42 52 62
 # R1  01 11 21 31 41 51 61 
 # R0  00 10 20 30 40 50 60
+
+# X    O    X    X         X    .    
+
+# O    O    O    X         X    .    
+
+# O    X    X    X    O    O    .    
+
+# X    O    O    O    X    X    .    
+
+# O    O    X    X    O    O    .    
+
+# O    O    X    X    O    X    X
+# computer's turn now
+testBoard = [
+            ["O","O","X","O","O","X"],
+            ["O","O","O","X","O","O"],
+            ["X","X","O","X","O","X"],
+            ["X","X","O","X","X","X"],
+            ["O","O","X","O",".","."],
+            ["X","O","X","O","X","X"],
+            ["X",".",".",".",".","."]]
 
 originalBoard = []  # [ [C0 rows], [C1 rows], ... , [C6 rows] ]
 maxC = 7   
@@ -41,7 +63,7 @@ def printBoard(board):
     s = ""
     for row in range(maxR):
         for col in range(len(board)):
-            s += str(board[col][maxR - row - 1]) + "    "
+            s += str(board[col][maxR - row - 1]) + "   "
         if row < maxR-1:
             s += "\n"
         print(s)
@@ -57,7 +79,9 @@ def availableCols(board):
                 count += 1
         if count < maxR:
             li.append(col_num)
-    return li
+    li_shuffled = li[:]
+    random.shuffle(li_shuffled)
+    return li_shuffled
 
 # drop player's chip in col of board
 def dropChip(col, player, board):
@@ -219,12 +243,39 @@ def boardState(board, player):
         if chip == player:
             numCenters += 1
 
-    # 4 in a row not found, so return score based on board state
+# [3, 4, 5,  7,  5,  4, 3], 
+# [4, 6, 8,  10, 8,  6, 4],
+# [5, 8, 11, 13, 11, 8, 5], 
+# [5, 8, 11, 13, 11, 8, 5],
+# [4, 6, 8,  10, 8,  6, 4],
+# [3, 4, 5,  7,  5,  4, 3]
+
+    #                 R  0 1 2 3 4 5
+    evaluationTable =  [[3,4,5,5,4,3],      # C0
+                        [4,6,8,8,6,4],      # C1
+                        [5,8,11,11,8,5],    # C2
+                        [7,10,13,13,10,7],  # C3
+                        [5,8,11,11,8,5],    # C4
+                        [4,6,8,8,6,4],
+                        [3,4,5,5,4,3]]
+    evalScore = 0
+    for coln in range(len(board)):
+        for rown in range(coln):
+            if board[coln][rown] == player:
+                evalScore += evaluationTable[coln][rown]
+
+    # return score based on board state
     # 2-in-row < center col < 3-in-row < 4-in-row
-    score = 50*numCenters + 10*numTwos + 100*numThrees + 500*numFours
+    score = evalScore + 10*numTwos + 100*numThrees + 1000000*numFours + 20*numCenters
     if player == red:
         return (-1 * score)
     return score
+
+def otherPlayer(player):
+    if player == red:
+        return yellow
+    else:
+        return red
 
 # minimax function with alpha-beta pruning
 def minimax(board, player, depth, alpha, beta):
@@ -232,20 +283,23 @@ def minimax(board, player, depth, alpha, beta):
     availCols = availableCols(board)
 
     # check wins
-    if winning(board, red):
-        return Move(-100000)
-    elif winning(board, yellow): # ai, yellow, max
-        return Move(100000)
-    # else if depth == 0, evaluate board state at that time (return score based on how many 2 and 3 in a row)
-    elif depth == 0:
-        score = boardState(board, player)
+    if winning(board, red): # human, minimizing player
+        b = boardState(board, red)
+        return Move(b)
+    elif winning(board, yellow): # ai, maximizing player
+        b = boardState(board, yellow)
+        return Move(b)
+    
+    # else if depth == 0, evaluate board state at that time
+    elif depth == 0 or len(availCols) == 0:
+        score = boardState(board, player) + boardState(board, otherPlayer(player))
         return Move(score)
     
     # create a move object
     m = Move(0)
 
     if player == yellow: # if ai, maximize
-        bestScore = -100000000
+        bestScore = -1000000000000
         for i in range(len(availCols)):
             # drop player's chip in the column number of board
             r = dropChip(availCols[i], player, board)
@@ -261,7 +315,7 @@ def minimax(board, player, depth, alpha, beta):
         return m
 
     elif player == red: # if human, minimize
-        bestScore = 100000000
+        bestScore = 1000000000000
         for i in range(len(availCols)):
             # drop player's chip in the column number of board
             r = dropChip(availCols[i], player, board)
@@ -279,16 +333,16 @@ def minimax(board, player, depth, alpha, beta):
 def printLast(ind):
     s1 = ""
     for i in range(maxC):
-        s1 += str(i+1) + "    "
+        s1 += str(i+1) + "   "
     if ind == -1:
         print("\n" + s1)
         return
     li = []
     for c in range(maxC):
         if c == ind:
-            li.append("@    ")
+            li.append("@   ")
         else:
-            li.append("     ")
+            li.append("    ")
     s = ""
     for i in range(len(li)):
         s += li[i]
@@ -324,6 +378,8 @@ def checkGameOver(run):
 
 def main():
     running = True
+    moves = 1
+    d = 7
     ind = -1
     # game loop
     while running:
@@ -333,6 +389,7 @@ def main():
         print("@" + " last move made")
         print(yellow + " \"Paul\" the a.i.")
         print(red + " You\n")
+        print("Move: ", moves)
         # player's turn 
         printLast(ind)
         printBoard(originalBoard)
@@ -349,6 +406,7 @@ def main():
         while (inp not in valid):
             inp = input()
         dropChip(int(inp)-1, red, originalBoard)
+        moves += 1
         ind = int(inp)-1 
 
         # computer's turn
@@ -358,13 +416,23 @@ def main():
         print("@" + " last move made")
         print(yellow + " \"Paul\" the a.i.")
         print(red + " You\n")
+        print("Move: ", moves)
         printLast(ind) 
         printBoard(originalBoard)
         if checkGameOver(running):
             break
         print("Paul is thinking...")
-        m = minimax(originalBoard, yellow, 7, -999999999, 999999999)
+        # if 15 <= moves <= 20:
+        #     d = 8
+        if 19 <= moves <= 24:
+            d = 8
+        elif 25 <= moves <= 29:
+            d = 9
+        elif moves >= 30:
+            d = 10
+        m = minimax(originalBoard, yellow, d, -999999999, 999999999)
         dropChip(m.col, yellow, originalBoard)
+        moves += 1
         ind = m.col
 
 if __name__ == "__main__":
