@@ -17,8 +17,8 @@ import random
 originalBoard = []  # [ [C0 rows], [C1 rows], ... , [C6 rows] ]
 maxC = 7   
 maxR = 6
-red = "R"           # human player, minimizer
-yellow = "Y"        # AI player, maximizer
+red = "X"           # human player, minimizer
+yellow = "O"        # AI player, maximizer
 placeholder = "."
 
 # initialize the board to dots
@@ -339,9 +339,9 @@ def initBoard(moveHistory, board):
 def printMoveHistory(moveHistory):
     s = ""
     for i in range(len(moveHistory)):
-        s += "(\"" + str(moveHistory[i][0]) + "\"," + str(moveHistory[i][1]) + ")"
+        s += str(moveHistory[i][0]) + str(moveHistory[i][1])
         if i < len(moveHistory)-1:
-            s += ","
+            s += "-"
     print("Moves Made: " + s)
 
 # print column numbers and last move made
@@ -386,9 +386,10 @@ def checkGameOver():
         return ""
 
 running = True
+gameOver = False
 moves = 1
 t = 1
-d = 7
+d = 6
 ind = -1
 
 # function to help get input without having to press enter
@@ -413,17 +414,18 @@ def takeTurn(player):
     global t
     global ind
     global moveHistory
+    global gameOver
 
     clear()
     print("\nEnter column number to drop a chip, q to quit game")
-    print(placeholder + " empty space")
-    print("@" + " last move made")
-    print(yellow + " \"Paul\" the a.i.")
-    print(red + " You\n")
-    print("Move: ", moves) 
+    print(placeholder + " - empty space")
+    print("@" + " - last move made")
+    print(yellow + " - Paul the a.i.")
+    print(red + " - You\n")
     printLast(ind)
     print("\n") 
     printBoard(originalBoard)
+    print("Move: ", moves)
     inp = ""
 
     # player's turn
@@ -451,27 +453,29 @@ def takeTurn(player):
     
     if inp != "q":
         dropChip(ind, player, originalBoard)
-        moves += 1
         moveHistory.append((player, ind+1))
         c = checkGameOver()
-        if c:
+        if c == "":
+            moves += 1
+        elif c:
             clear()
             print("\nEnter column number to drop a chip, q to quit game")
-            print(placeholder + " empty space")
-            print("@" + " last move made")
-            print(yellow + " \"Paul\" the a.i.")
-            print(red + " You\n")
-            print("Move: ", moves)
+            print(placeholder + " - empty space")
+            print("@" + " - last move made")
+            print(yellow + " - \"Paul\" the a.i.")
+            print(red + " - You\n")
             printLast(ind) 
             printBoard(originalBoard)
-            printMoveHistory(moveHistory)
             if c == "win":
                 print("You won!")
             elif c == "lose":
                 print("You lost!")
             elif c == "tie":
                 print("It's a tie!")
+            print("Move: ", moves)
+            printMoveHistory(moveHistory)
             moves = 1
+            gameOver = True
             running = False
 
 # paste move history [(col, player), (col, player), ...] 
@@ -486,6 +490,7 @@ def main():
     global moves
     global originalBoard
     global moveHistory
+    global gameOver
     startingPlayer = yellow
     currPlayer = startingPlayer
     createBoard(originalBoard)
@@ -498,19 +503,29 @@ def main():
     while newGame:
         while running:
             takeTurn(currPlayer)
-            if currPlayer != yellow:
-                currPlayer = yellow
-            else:
-                currPlayer = red
-        print("Press space to play again. Press q to terminate")
+            currPlayer = otherPlayer(currPlayer)
+
+        if gameOver:
+            print("Press space to play again, or q to terminate")
+        elif gameOver == False:
+            print("Press r to resume game, space to start over, or q to terminate")
         inp = getch()
         if inp == "q":
             newGame = False
+        elif inp == "r":
+            running = True
+            originalBoard.clear() 
+            createBoard(originalBoard)
+            initBoard(moveHistory, originalBoard)
+            if moveHistory:
+                currPlayer = otherPlayer(moveHistory[-1][0])
         elif inp == " ":
             running = True
             originalBoard.clear() 
             moveHistory.clear() 
             createBoard(originalBoard)
+            currPlayer = startingPlayer
+            gameOver = False
             moves = 1 
 
 if __name__ == "__main__":
