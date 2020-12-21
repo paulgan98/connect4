@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
 import os
+import os.path
 import random
+import time
 
 # (C,R)
 # (7,6)
@@ -20,6 +22,20 @@ maxR = 6
 red = "X"           # human player, minimizer
 yellow = "O"        # AI player, maximizer
 placeholder = "."
+
+# paste move history [(col, player), (col, player), ...] 
+# into moveHistory to initialize board to that state. 
+# Otherwise, set to empty list
+moveHistory = []
+aiWins = 0
+playerWins = 0
+ties = 0
+running = True
+gameOver = False
+moves = 1
+t = 1
+d = 6
+ind = -1
 
 # initialize the board to dots
 def createBoard(board):
@@ -183,7 +199,7 @@ def boardState(board, player):
                     c = coln
             else:
                 if count == 2 or count == 3:
-                    if c == 0 and board[c + count][rown] == placeholder:
+                    if c == 0 and board[c+count][rown] == placeholder:
                         score += count**2
                     elif 1 <= c < maxC-count and (board[c-1][rown] == placeholder) or (board[c+count][rown] == placeholder):
                         score += count**2
@@ -301,7 +317,7 @@ def minimax(board, player, time, depth, alpha, beta):
         for i in range(len(availCols)):
             # drop player's chip in the column number of board
             r = dropChip(availCols[i], player, board)
-            result = minimax(board, red, time*0.98, depth-1, alpha, beta)
+            result = minimax(board, red, time*0.7, depth-1, alpha, beta)
             board[availCols[i]][r] = placeholder
             if result.score > bestScore:
                 bestScore = result.score
@@ -385,13 +401,6 @@ def checkGameOver():
     else:
         return ""
 
-running = True
-gameOver = False
-moves = 1
-t = 1
-d = 6
-ind = -1
-
 # function to help get input without having to press enter
 def getch():
     import termios
@@ -407,6 +416,71 @@ def getch():
         return ch
     return _getch()
 
+filename = "c4_data.txt"
+
+# function to get saved game data
+def getData():
+    global aiWins
+    global playerWins
+    global ties
+    
+    if os.path.isfile(filename):
+        try:
+            with open(filename, "r") as f:
+                aiWins = int(f.readline())
+                playerWins = int(f.readline())
+                ties = int(f.readline())
+        except:
+            with open(filename, "w") as f:
+                for i in range(3):
+                    f.writelines("0\n")
+    else: # create file
+        with open(filename, "w") as f:
+            for i in range(3):
+                f.writelines("0\n")
+
+# function to save game data
+def saveData():
+    with open(filename, "w") as f:
+        f.writelines(str(aiWins)+"\n")
+        f.writelines(str(playerWins)+"\n")
+        f.writelines(str(ties)+"\n")
+
+# print text on game screen
+def printText(player):
+    global moves
+    global ind
+    global moveHistory
+    global playerWins
+    global aiWins
+    global ties
+    clear()
+    print("\nEnter column number to drop a chip, q to quit game")
+    print(placeholder + " - empty space")
+    print("@" + " - last move made")
+    print(yellow + " - Paul the a.i.")
+    print(red + " - You")
+    print("a.i. wins:", aiWins, "| player wins:", playerWins, "| ties:", ties, "\n")
+    printLast(ind)
+    printBoard(originalBoard)
+    print("Move: ", moves)
+    if player == red:
+        print("Your turn (" + red + ")")
+    else:
+        print("Paul is thinking...")
+
+# function to print chip dropping animation
+def dropChipAnimation(col, row, player):
+    r = maxR - 1
+    while r != row:
+        originalBoard[col][row] = placeholder
+        originalBoard[col][r] = player
+        printText(player)
+        originalBoard[col][r] = placeholder
+        r -= 1
+        time.sleep(0.03)
+    originalBoard[col][row] = player
+
 def takeTurn(player):
     global running
     global moves
@@ -415,22 +489,16 @@ def takeTurn(player):
     global ind
     global moveHistory
     global gameOver
+    global playerWins
+    global aiWins
+    global ties
 
-    clear()
-    print("\nEnter column number to drop a chip, q to quit game")
-    print(placeholder + " - empty space")
-    print("@" + " - last move made")
-    print(yellow + " - Paul the a.i.")
-    print(red + " - You\n")
-    printLast(ind)
-    print("\n") 
-    printBoard(originalBoard)
-    print("Move: ", moves)
+    printText(player)
     inp = ""
 
     # player's turn
     if player == red:
-        print("Your turn (" + red + ")")
+        # print("Your turn (" + red + ")")
         valid = availableCols(originalBoard)
         for i in range(len(valid)):
             valid[i] = str(valid[i] + 1)
@@ -447,86 +515,79 @@ def takeTurn(player):
 
     # ai's turn
     else:  # yellow
-        print("Paul is thinking...")
+        # print("Paul is thinking...")
+        if 19 <= moves <= 25:
+            d = 7
+        elif moves > 25:
+            d = 8
         m = minimax(originalBoard, player, t, d, -999999999, 999999999)
         ind = m.col
     
     if inp != "q":
-        dropChip(ind, player, originalBoard)
+        r = dropChip(ind, player, originalBoard)
+        dropChipAnimation(ind, r, player) #
         moveHistory.append((player, ind+1))
         c = checkGameOver()
         if c == "":
             moves += 1
         elif c:
-            clear()
-            print("\nEnter column number to drop a chip, q to quit game")
-            print(placeholder + " - empty space")
-            print("@" + " - last move made")
-            print(yellow + " - \"Paul\" the a.i.")
-            print(red + " - You\n")
-            printLast(ind) 
-            printBoard(originalBoard)
+            if c == "win":
+                playerWins += 1
+            elif c == "lose":
+                aiWins += 1
+            elif c == "tie":
+                ties += 1
+            saveData()
+            printText(player)
+            printMoveHistory(moveHistory)
             if c == "win":
                 print("You won!")
             elif c == "lose":
                 print("You lost!")
             elif c == "tie":
                 print("It's a tie!")
-            print("Move: ", moves)
-            printMoveHistory(moveHistory)
             moves = 1
+            ind = -1
+            d = 6
             gameOver = True
             running = False
 
-# paste move history [(col, player), (col, player), ...] 
-# into moveHistory to initialize board to that state. 
-# Otherwise, set to empty list
-moveHistory = []
-running = True
 
-# player vs ai
-def main():
-    global running
-    global moves
-    global originalBoard
-    global moveHistory
-    global gameOver
-    startingPlayer = yellow
-    currPlayer = startingPlayer
-    createBoard(originalBoard)
-    initBoard(moveHistory, originalBoard)
-    if moveHistory:
-        startingPlayer = otherPlayer(moveHistory[-1][0])
-    newGame = True
 
-    # game loop
-    while newGame:
-        while running:
-            takeTurn(currPlayer)
-            currPlayer = otherPlayer(currPlayer)
+getData()
+startingPlayer = yellow
+currPlayer = startingPlayer
+createBoard(originalBoard)
+initBoard(moveHistory, originalBoard)
+if moveHistory:
+    startingPlayer = otherPlayer(moveHistory[-1][0])
+newGame = True
 
-        if gameOver:
-            print("Press space to play again, or q to terminate")
-        elif gameOver == False:
-            print("Press r to resume game, space to start over, or q to terminate")
-        inp = getch()
-        if inp == "q":
-            newGame = False
-        elif inp == "r":
-            running = True
-            originalBoard.clear() 
-            createBoard(originalBoard)
-            initBoard(moveHistory, originalBoard)
-            if moveHistory:
-                currPlayer = otherPlayer(moveHistory[-1][0])
-        elif inp == " ":
-            running = True
-            originalBoard.clear() 
-            moveHistory.clear() 
-            createBoard(originalBoard)
-            currPlayer = startingPlayer
-            gameOver = False
-            moves = 1 
+# game loop
+while newGame:
+    while running:
+        takeTurn(currPlayer)
+        currPlayer = otherPlayer(currPlayer)
 
-if __name__ == "__main__":
-    main()
+    if gameOver:
+        print("Press space to play again, or q to terminate")
+    elif gameOver == False:
+        print("Press r to resume game, space to start over, or q to terminate")
+    inp = getch()
+    if inp == "q":
+        newGame = False
+    elif inp == "r":
+        running = True
+        originalBoard.clear() 
+        createBoard(originalBoard)
+        initBoard(moveHistory, originalBoard)
+        if moveHistory:
+            currPlayer = otherPlayer(moveHistory[-1][0])
+    elif inp == " ":
+        running = True
+        originalBoard.clear() 
+        moveHistory.clear() 
+        createBoard(originalBoard)
+        currPlayer = startingPlayer
+        gameOver = False
+        moves = 1 
